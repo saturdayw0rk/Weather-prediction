@@ -1,0 +1,6 @@
+# No [theme] section on purpose: defining any theme option replaces Streamlit's
+# built-in light/dark themes with a single custom theme and disables the
+# automatic switch to dark mode.
+
+[browser]
+gatherUsageStats = false
