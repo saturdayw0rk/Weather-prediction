@@ -1,0 +1,45 @@
+# Sends the Telegram weather notifications (notify.py) from GitHub's servers,
+# so they arrive even when the local computer is off.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+# Optional repository variable:
+#   TELEGRAM_LOCATIONS (comma-separated cities, default Ulaanbaatar)
+
+name: Telegram weather
+
+on:
+  schedule:
+    # Cron times are UTC. Mongolia is UTC+8 with no daylight saving time.
+    - cron: "0 23 * * *"   # 07:00 Ulaanbaatar -> today's forecast
+    - cron: "0 12 * * *"   # 20:00 Ulaanbaatar -> tomorrow's forecast
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "morning = today, evening = tomorrow"
+        type: choice
+        options: [morning, evening]
+        default: evening
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Only what notify.py needs; the dashboard's Streamlit/Plotly stack is not required.
+      - name: Install dependencies
+        run: pip install "pandas>=2.1,<3" "requests>=2.31,<3" "python-dotenv>=1.0,<2" "tzdata>=2024.1"
+
+      - name: Send notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_LOCATIONS: ${{ vars.TELEGRAM_LOCATIONS || 'Ulaanbaatar' }}
+          MODE: ${{ inputs.mode || (github.event.schedule == '0 23 * * *' && 'morning' || 'evening') }}
+        run: python notify.py "$MODE"
