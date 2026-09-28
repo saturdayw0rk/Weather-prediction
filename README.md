@@ -87,18 +87,61 @@ Then open <http://localhost:8501>.
 | `OBSERVATION_MAX_DISTANCE_KM` | `50` | max station distance for observations |
 | `OBSERVATION_MAX_AGE_HOURS` | `2` | older reports are shown as unavailable |
 | `FORECAST_DAYS` | `7` | forecast length requested |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | empty | Telegram bot and target chat for `notify.py` |
+| `TELEGRAM_LOCATIONS` | `DEFAULT_LOCATION` | comma-separated cities to send notifications for |
 | `OPEN_METEO_FORECAST_URL`, `OPEN_METEO_META_URL`, `METAR_URL` | public endpoints | override the API base URLs |
+
+## Telegram notifications
+
+`notify.py` sends a forecast summary (in Mongolian) to a Telegram chat, using the
+same Open-Meteo forecast as the dashboard:
+
+| Command | Sends | Scheduled at |
+|---|---|---|
+| `python notify.py morning` | **today's** forecast | 07:00 |
+| `python notify.py evening` | **tomorrow's** forecast | 20:00 |
+
+Each message gives the condition, min/max and feels-like temperature, precipitation
+probability and amount, snowfall, wind (m/s, with gusts and direction), UV index,
+sunrise/sunset, and a night / morning / afternoon / evening breakdown. If the
+forecast cannot be fetched, the message says the data is unavailable. No values
+are substituted.
+
+**Setup**
+
+1. Create a bot with [@BotFather](https://t.me/BotFather) and copy its token.
+2. Send your bot any message. Then open
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `chat.id`.
+   For a group, add the bot to the group first. For a channel, make the bot an admin.
+3. In `.env`, set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. Optionally set
+   `TELEGRAM_LOCATIONS`, a comma-separated list of cities that each get their own message.
+4. Test it: `python notify.py evening --dry-run` prints the message without
+   sending it. `python notify.py evening` sends it.
+5. Schedule it with Windows Task Scheduler:
+
+   ```powershell
+   .\scripts\register_telegram_tasks.ps1                                   # 07:00 and 20:00
+   .\scripts\register_telegram_tasks.ps1 -MorningTime 07:30 -EveningTime 21:00
+   .\scripts\register_telegram_tasks.ps1 -Unregister                       # remove both tasks
+   ```
+
+   The tasks run while you are logged on. If the PC was asleep at the scheduled
+   time, the task runs as soon as the PC wakes. On Linux/macOS, use cron instead:
+   `0 7 * * * cd /path/to/weather_dashboard && .venv/bin/python notify.py morning`.
 
 ## Project structure
 
 ```
 weather_dashboard/
 ├── app.py                  # entry point: page layout, sidebar, caching, refresh
+├── notify.py               # Telegram notifications (morning: today, evening: tomorrow)
 ├── config.py               # settings from environment / .env
 ├── requirements.txt
 ├── README.md
 ├── .env.example
 ├── .streamlit/config.toml
+├── scripts/
+│   └── register_telegram_tasks.ps1  # Windows Task Scheduler jobs for notify.py
 ├── data/
 │   └── locations.py        # city coordinates + METAR station list
 ├── services/

@@ -39,6 +39,9 @@ class Settings:
     observation_max_distance_km: float
     observation_max_age_hours: float
     forecast_days: int
+    telegram_bot_token: str
+    telegram_chat_id: str
+    telegram_locations: tuple[str, ...]
 
 
 settings = Settings(
@@ -51,4 +54,9 @@ settings = Settings(
     observation_max_distance_km=_env_float("OBSERVATION_MAX_DISTANCE_KM", 50.0),
     observation_max_age_hours=_env_float("OBSERVATION_MAX_AGE_HOURS", 2.0),
     forecast_days=_env_int("FORECAST_DAYS", 7),
+    telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", "").strip(),
+    telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID", "").strip(),
+    telegram_locations=tuple(
+        name.strip() for name in os.getenv("TELEGRAM_LOCATIONS", "").split(",") if name.strip()
+    ) or (_env_str("DEFAULT_LOCATION", "Ulaanbaatar"),),
 )
